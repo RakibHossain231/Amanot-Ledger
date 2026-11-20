@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, ShieldCheck, KeyRound, AlertCircle, CheckCircle2, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -6,6 +7,7 @@ import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 
 export const AuthPage = () => {
+  const navigate = useNavigate();
   const { lang, t } = useLanguage();
   const {
     signIn,
@@ -132,6 +134,7 @@ export const AuthPage = () => {
     try {
       if (mode === 'login') {
         await signIn(email, password);
+        navigate('/', { replace: true });
       } else if (mode === 'signup') {
         const res = await signUp(email, password, fullName);
         setMode('verify');
@@ -141,6 +144,7 @@ export const AuthPage = () => {
           : `A verification code was sent to ${email}. Please enter it below:`);
       } else if (mode === 'verify') {
         await verifyEmailOtp({ email, token: otpCode });
+        navigate('/', { replace: true });
       }
     } catch (err) {
       setErrorMsg(err.message || 'Authentication failed');
@@ -393,7 +397,10 @@ export const AuthPage = () => {
           </p>
           <button
             type="button"
-            onClick={enableGuestMode}
+            onClick={() => {
+              enableGuestMode();
+              navigate('/', { replace: true });
+            }}
             className="text-xs font-semibold text-[#7542C8] dark:text-purple-300 hover:underline flex items-center justify-center gap-1.5 mx-auto"
           >
             <ShieldCheck className="w-3.5 h-3.5" />

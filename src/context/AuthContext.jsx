@@ -143,7 +143,9 @@ export const AuthProvider = ({ children }) => {
     setSession(null);
     localStorage.removeItem('amanot_local_owner');
     localStorage.removeItem('amanot_guest_mode');
+    sessionStorage.removeItem('amanot_recovery_mode');
     setGuestMode(false);
+    window.history.replaceState(null, '', '/');
   };
 
   const sendPasswordResetOtp = async (email) => {

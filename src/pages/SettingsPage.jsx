@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Moon, Sun, Monitor, Globe, Shield, RefreshCw, Smartphone, Info, Download, Upload, CheckCircle2, AlertCircle, Lock, LogOut, KeyRound } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -9,6 +10,7 @@ import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
 
 export const SettingsPage = () => {
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLanguage();
   const { user, guestMode, signOut, savedPin, setPin, removePin } = useAuth();
@@ -345,6 +347,7 @@ export const SettingsPage = () => {
           onClick={() => {
             if (window.confirm(lang === 'bn' ? 'আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?' : 'Are you sure you want to log out?')) {
               signOut();
+              navigate('/', { replace: true });
             }
           }}
           className="w-full py-3.5 px-4 rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/50 hover:bg-red-100/70 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99] cursor-pointer"
