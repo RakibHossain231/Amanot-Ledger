@@ -73,10 +73,6 @@ export const AccountDetailsPage = () => {
       );
     });
 
-  const quickParticularSuggestions = lang === 'bn' 
-    ? ['টাকা জমা', 'টাকা ফেরত', 'মাসিক আমানত', 'জরুরি ধার', 'ব্যক্তিগত লোন', 'বকেয়া পরিশোধ']
-    : ['Deposit', 'Refund', 'Monthly Deposit', 'Personal Loan', 'Advance', 'Settlement'];
-
   const handleOpenAddTx = () => {
     setEditingTx(null);
     setTxType('credit');
@@ -444,7 +440,7 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
-          {/* Particular / Title & Quick Suggestions */}
+          {/* Particular / Title */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('particular')} *
@@ -457,18 +453,6 @@ export const AccountDetailsPage = () => {
               placeholder={t('particularPlaceholder')}
               className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
             />
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {quickParticularSuggestions.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setTxParticular(item)}
-                  className="px-2 py-1 rounded-lg text-[11px] bg-purple-50 dark:bg-purple-950/40 text-[#7542C8] dark:text-purple-300 hover:bg-purple-100 transition-colors"
-                >
-                  + {item}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Grid: Method & Date */}
