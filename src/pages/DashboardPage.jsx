@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, UserPlus, ArrowRightLeft, Edit2, Trash2, ChevronRight, Search, FileText, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Plus, UserPlus, ArrowRightLeft, Edit2, Trash2, ChevronRight, Search, FileDown, FileSpreadsheet, Download } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useLanguage } from '../context/LanguageContext';
 import { SummaryCards } from '../components/common/SummaryCards';
 import { formatCurrency } from '../utils/currency';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
+import { exportDashboardPDF, exportDashboardExcel } from '../utils/exporter';
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
@@ -42,6 +43,9 @@ export const DashboardPage = () => {
   const [quickMethodId, setQuickMethodId] = useState('');
   const [quickDate, setQuickDate] = useState(new Date().toISOString().split('T')[0]);
   const [quickTxError, setQuickTxError] = useState('');
+
+  // Export Modal state
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const overall = getOverallSummary();
 
@@ -143,6 +147,24 @@ export const DashboardPage = () => {
     }
   };
 
+  const handleExportPDF = () => {
+    const accountsWithSummary = accounts.map((acc) => ({
+      ...acc,
+      ...getAccountSummary(acc.id),
+    }));
+    exportDashboardPDF(accountsWithSummary, overall, lang);
+    setIsExportOpen(false);
+  };
+
+  const handleExportExcel = () => {
+    const accountsWithSummary = accounts.map((acc) => ({
+      ...acc,
+      ...getAccountSummary(acc.id),
+    }));
+    exportDashboardExcel(accountsWithSummary, overall);
+    setIsExportOpen(false);
+  };
+
   return (
     <div className="pb-24 pt-3 px-4 max-w-3xl mx-auto space-y-4">
       {/* 1. Overview Summary Cards */}
@@ -152,27 +174,51 @@ export const DashboardPage = () => {
         netBalance={overall.netBalance}
       />
 
-      {/* 2. Search & Section Header */}
+      {/* 2. Search, Export & Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
-            {t('accounts')}
-          </h2>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-[#7542C8] dark:text-purple-300 font-semibold">
-            {accounts.length}
-          </span>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
+              {t('accounts')}
+            </h2>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-[#7542C8] dark:text-purple-300 font-semibold">
+              {accounts.length}
+            </span>
+          </div>
+
+          {/* Mobile Export Trigger */}
+          <button
+            onClick={() => setIsExportOpen(true)}
+            className="sm:hidden p-2 rounded-xl text-[#7542C8] dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100"
+            title={t('export')}
+          >
+            <Download className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={t('searchAccounts')}
-            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#211B30] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]/30 dark:focus:ring-purple-500/30 transition-all"
-          />
+        <div className="flex items-center gap-2">
+          {/* Search Bar */}
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t('searchAccounts')}
+              className="w-full pl-9 pr-4 py-2 text-sm rounded-xl bg-white dark:bg-[#211B30] border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]/30 dark:focus:ring-purple-500/30 transition-all"
+            />
+          </div>
+
+          {/* Desktop Export Button */}
+          <Button
+            variant="outline"
+            size="md"
+            onClick={() => setIsExportOpen(true)}
+            icon={Download}
+            className="hidden sm:inline-flex text-xs py-2"
+          >
+            {t('export')}
+          </Button>
         </div>
       </div>
 
@@ -368,7 +414,6 @@ export const DashboardPage = () => {
         maxWidth="max-w-md"
       >
         <form onSubmit={handleSaveQuickTx} className="space-y-4">
-          {/* Account Selection */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {lang === 'bn' ? 'অ্যাকাউন্ট নির্বাচন করুন' : 'Select Account'} *
@@ -386,7 +431,6 @@ export const DashboardPage = () => {
             </select>
           </div>
 
-          {/* Type Selector */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('transactionType')} *
@@ -401,7 +445,7 @@ export const DashboardPage = () => {
                     : 'border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
                 }`}
               >
-                <ArrowDownLeft className="w-4 h-4" />
+                <ArrowRightLeft className="w-4 h-4" />
                 {t('creditShort')}
               </button>
               <button
@@ -413,13 +457,12 @@ export const DashboardPage = () => {
                     : 'border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400'
                 }`}
               >
-                <ArrowUpRight className="w-4 h-4" />
+                <ArrowRightLeft className="w-4 h-4" />
                 {t('debitShort')}
               </button>
             </div>
           </div>
 
-          {/* Amount */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('amount')} *
@@ -439,7 +482,6 @@ export const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Particular */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('particular')} *
@@ -454,7 +496,6 @@ export const DashboardPage = () => {
             />
           </div>
 
-          {/* Method & Date */}
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
@@ -504,6 +545,39 @@ export const DashboardPage = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* 7. Export Dashboard Modal */}
+      <Modal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        title={lang === 'bn' ? 'ড্যাশবোর্ড রিপোর্ট এক্সপোর্ট' : 'Export Dashboard Report'}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {lang === 'bn' 
+              ? 'ড্যাশবোর্ড রিপোর্টে সকল সক্রিয় অ্যাকাউন্টের মোট জমা, মোট খরচ এবং বর্তমান ব্যালেন্সের তালিকা ডাউনলোড করা হবে।' 
+              : 'Download a summary statement of all accounts with total credit, total debit, and current balance.'}
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              onClick={handleExportPDF}
+              className="py-4 px-3 rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 hover:bg-purple-100 text-[#7542C8] dark:text-purple-300 flex flex-col items-center gap-2 transition-all"
+            >
+              <FileDown className="w-7 h-7" />
+              <span className="text-xs font-bold">PDF Format</span>
+            </button>
+
+            <button
+              onClick={handleExportExcel}
+              className="py-4 px-3 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100 text-green-700 dark:text-green-300 flex flex-col items-center gap-2 transition-all"
+            >
+              <FileSpreadsheet className="w-7 h-7" />
+              <span className="text-xs font-bold">Excel (.xlsx)</span>
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

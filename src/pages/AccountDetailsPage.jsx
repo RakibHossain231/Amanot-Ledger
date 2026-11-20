@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Search, ArrowLeft, ArrowDownLeft, ArrowUpRight, Calendar, Tag, CreditCard, Edit2, Trash2, Download, Filter } from 'lucide-react';
+import { Plus, Search, ArrowLeft, ArrowDownLeft, ArrowUpRight, Calendar, Tag, CreditCard, Edit2, Trash2, Download, Filter, FileDown, FileSpreadsheet } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useLanguage } from '../context/LanguageContext';
 import { SummaryCards } from '../components/common/SummaryCards';
 import { formatCurrency } from '../utils/currency';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
+import { exportAccountPDF, exportAccountExcel } from '../utils/exporter';
 
 export const AccountDetailsPage = () => {
   const { id } = useParams();
@@ -29,6 +30,7 @@ export const AccountDetailsPage = () => {
   const [filterType, setFilterType] = useState('all'); // all | credit | debit
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   // Form states
   const [txType, setTxType] = useState('credit');
@@ -150,6 +152,16 @@ export const AccountDetailsPage = () => {
     }
   };
 
+  const handleExportPDF = () => {
+    exportAccountPDF(account, summary, accountTxs, lang);
+    setIsExportOpen(false);
+  };
+
+  const handleExportExcel = () => {
+    exportAccountExcel(account, summary, accountTxs);
+    setIsExportOpen(false);
+  };
+
   return (
     <div className="min-h-screen pb-24">
       {/* 1. Account Details Header */}
@@ -164,7 +176,7 @@ export const AccountDetailsPage = () => {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="font-bold text-base leading-tight truncate max-w-[180px] sm:max-w-xs">
+              <h1 className="font-bold text-base leading-tight truncate max-w-[150px] sm:max-w-xs">
                 {account.name}
               </h1>
               <p className="text-[11px] text-purple-200">
@@ -173,7 +185,15 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setIsExportOpen(true)}
+              className="p-2 rounded-xl text-white hover:bg-white/10 active:bg-white/20 transition-colors"
+              title={t('export')}
+            >
+              <Download className="w-4 h-4" />
+            </button>
+
             <Button
               variant="secondary"
               size="sm"
@@ -358,7 +378,6 @@ export const AccountDetailsPage = () => {
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleSaveTx} className="space-y-4">
-          {/* Type Selector: Credit (+) vs Debit (−) */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('transactionType')} *
@@ -402,7 +421,6 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
-          {/* Amount Field */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('amount')} *
@@ -424,7 +442,6 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
-          {/* Particular / Title & Quick Suggestions */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('particular')} *
@@ -437,7 +454,6 @@ export const AccountDetailsPage = () => {
               placeholder={t('particularPlaceholder')}
               className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
             />
-            {/* Quick chips */}
             <div className="flex flex-wrap gap-1.5 mt-2">
               {quickParticularSuggestions.map((item) => (
                 <button
@@ -452,7 +468,6 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
-          {/* Grid: Method & Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -505,7 +520,6 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
-          {/* Optional Note */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('note')}
@@ -540,6 +554,39 @@ export const AccountDetailsPage = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* 6. Export Individual Account Modal */}
+      <Modal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        title={lang === 'bn' ? 'ব্যক্তিগত লেজার এক্সপোর্ট' : 'Export Individual Ledger'}
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {lang === 'bn' 
+              ? `${account.name} এর সকল লেনদেন হিস্ট্রি ও ব্যালেন্স বিবরণী ডাউনলোড করুন।`
+              : `Download full transaction ledger statement for ${account.name}.`}
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              onClick={handleExportPDF}
+              className="py-4 px-3 rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 hover:bg-purple-100 text-[#7542C8] dark:text-purple-300 flex flex-col items-center gap-2 transition-all"
+            >
+              <FileDown className="w-7 h-7" />
+              <span className="text-xs font-bold">PDF Statement</span>
+            </button>
+
+            <button
+              onClick={handleExportExcel}
+              className="py-4 px-3 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100 text-green-700 dark:text-green-300 flex flex-col items-center gap-2 transition-all"
+            >
+              <FileSpreadsheet className="w-7 h-7" />
+              <span className="text-xs font-bold">Excel (.xlsx)</span>
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
