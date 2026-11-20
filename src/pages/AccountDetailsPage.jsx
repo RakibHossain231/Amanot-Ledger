@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Search, ArrowLeft, MoreVertical, Edit2, Trash2, ArrowDownLeft, ArrowUpRight, Calendar, Tag, CreditCard } from 'lucide-react';
+import { Plus, Search, ArrowLeft, ArrowDownLeft, ArrowUpRight, Calendar, Tag, CreditCard, Edit2, Trash2, Download, Filter } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useLanguage } from '../context/LanguageContext';
 import { SummaryCards } from '../components/common/SummaryCards';
@@ -20,22 +20,28 @@ export const AccountDetailsPage = () => {
     addTransaction,
     editTransaction,
     deleteTransaction,
+    addMethod,
   } = useLedger();
 
   const account = accounts.find((a) => a.id === id);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all'); // all | credit | debit
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
 
   // Form states
-  const [txType, setTxType] = useState('credit'); // 'credit' | 'debit'
+  const [txType, setTxType] = useState('credit');
   const [txAmount, setTxAmount] = useState('');
   const [txParticular, setTxParticular] = useState('');
-  const [txMethodId, setTxMethodId] = useState(methods[0]?.id || 'm-cash');
+  const [txMethodId, setTxMethodId] = useState('');
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
   const [txNote, setTxNote] = useState('');
   const [formError, setFormError] = useState('');
+
+  // Inline Quick Add Method state
+  const [isAddingNewMethod, setIsAddingNewMethod] = useState(false);
+  const [newMethodName, setNewMethodName] = useState('');
 
   if (!account) {
     return (
@@ -49,17 +55,25 @@ export const AccountDetailsPage = () => {
   }
 
   const summary = getAccountSummary(account.id);
+
+  // Filtered transactions
   const accountTxs = transactions
     .filter((tx) => tx.accountId === account.id)
     .filter((tx) => {
+      if (filterType !== 'all' && tx.type !== filterType) return false;
       if (!searchTerm) return true;
       const term = searchTerm.toLowerCase();
       return (
         tx.particular?.toLowerCase().includes(term) ||
         tx.amount?.toString().includes(term) ||
-        tx.methodNameSnapshot?.toLowerCase().includes(term)
+        tx.methodNameSnapshot?.toLowerCase().includes(term) ||
+        tx.date?.includes(term)
       );
     });
+
+  const quickParticularSuggestions = lang === 'bn' 
+    ? ['টাকা জমা', 'টাকা ফেরত', 'মাসিক আমানত', 'জরুরি ধার', 'ব্যক্তিগত লোন', 'বকেয়া পরিশোধ']
+    : ['Deposit', 'Refund', 'Monthly Deposit', 'Personal Loan', 'Advance', 'Settlement'];
 
   const handleOpenAddTx = () => {
     setEditingTx(null);
@@ -70,6 +84,7 @@ export const AccountDetailsPage = () => {
     setTxDate(new Date().toISOString().split('T')[0]);
     setTxNote('');
     setFormError('');
+    setIsAddingNewMethod(false);
     setIsTxModalOpen(true);
   };
 
@@ -82,10 +97,11 @@ export const AccountDetailsPage = () => {
     setTxDate(tx.date || new Date().toISOString().split('T')[0]);
     setTxNote(tx.note || '');
     setFormError('');
+    setIsAddingNewMethod(false);
     setIsTxModalOpen(true);
   };
 
-  const handleSaveTx = (e) => {
+  const handleSaveTx = async (e) => {
     e.preventDefault();
     const numAmount = parseFloat(txAmount);
     if (isNaN(numAmount) || numAmount <= 0) {
@@ -98,22 +114,28 @@ export const AccountDetailsPage = () => {
       return;
     }
 
+    let finalMethodId = txMethodId;
+    if (isAddingNewMethod && newMethodName.trim()) {
+      const createdMethod = await addMethod(newMethodName.trim());
+      finalMethodId = createdMethod.id;
+    }
+
     if (editingTx) {
-      editTransaction(editingTx.id, {
+      await editTransaction(editingTx.id, {
         type: txType,
         amount: numAmount,
         particular: txParticular.trim(),
-        methodId: txMethodId,
+        methodId: finalMethodId || methods[0]?.id || 'm-cash',
         date: txDate,
         note: txNote.trim(),
       });
     } else {
-      addTransaction({
+      await addTransaction({
         accountId: account.id,
         type: txType,
         amount: numAmount,
         particular: txParticular.trim(),
-        methodId: txMethodId,
+        methodId: finalMethodId || methods[0]?.id || 'm-cash',
         date: txDate,
         note: txNote.trim(),
       });
@@ -122,26 +144,29 @@ export const AccountDetailsPage = () => {
     setIsTxModalOpen(false);
   };
 
-  const handleDeleteTx = (txId) => {
+  const handleDeleteTx = async (txId) => {
     if (window.confirm(t('deleteConfirmMsg'))) {
-      deleteTransaction(txId);
+      await deleteTransaction(txId);
     }
   };
 
   return (
     <div className="min-h-screen pb-24">
-      {/* 1. Account Details Header with Sticky Summary */}
-      <div className="sticky top-0 z-30 bg-[#7542C8] text-white shadow-md">
+      {/* 1. Account Details Header */}
+      <div className="sticky top-0 z-40 bg-[#7542C8] text-white shadow-md">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate('/')}
               className="p-1.5 rounded-full hover:bg-white/10 active:bg-white/20 transition-colors"
+              title={t('back')}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="font-bold text-base leading-tight">{account.name}</h1>
+              <h1 className="font-bold text-base leading-tight truncate max-w-[180px] sm:max-w-xs">
+                {account.name}
+              </h1>
               <p className="text-[11px] text-purple-200">
                 {lang === 'bn' ? 'ব্যক্তিগত লেজার খাতা' : 'Personal Ledger'}
               </p>
@@ -154,7 +179,7 @@ export const AccountDetailsPage = () => {
               size="sm"
               onClick={handleOpenAddTx}
               icon={Plus}
-              className="bg-white text-[#7542C8] hover:bg-white/90"
+              className="bg-white text-[#7542C8] hover:bg-white/90 shadow-sm"
             >
               {t('newTransaction')}
             </Button>
@@ -163,7 +188,7 @@ export const AccountDetailsPage = () => {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 space-y-4 pt-3">
-        {/* 2. Sticky Account Summary Section */}
+        {/* 2. Fixed/Sticky Summary Cards */}
         <SummaryCards
           totalCredit={summary.credit}
           totalDebit={summary.debit}
@@ -171,16 +196,44 @@ export const AccountDetailsPage = () => {
           sticky={true}
         />
 
-        {/* 3. Search & Transaction Controls */}
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <span>{t('history')}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-[#7542C8] dark:text-purple-300 font-semibold">
-              {accountTxs.length}
-            </span>
-          </h2>
+        {/* 3. Search and Type Filter Tabs */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-[#211B30] rounded-xl border border-gray-200 dark:border-gray-800 self-start">
+            <button
+              onClick={() => setFilterType('all')}
+              className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
+                filterType === 'all'
+                  ? 'bg-[#7542C8] text-white'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-100'
+              }`}
+            >
+              {lang === 'bn' ? 'সব' : 'All'}
+            </button>
+            <button
+              onClick={() => setFilterType('credit')}
+              className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
+                filterType === 'credit'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-500 hover:text-green-600'
+              }`}
+            >
+              {t('creditShort')}
+            </button>
+            <button
+              onClick={() => setFilterType('debit')}
+              className={`px-3 py-1 text-xs rounded-lg font-medium transition-all ${
+                filterType === 'debit'
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-500 hover:text-red-600'
+              }`}
+            >
+              {t('debitShort')}
+            </button>
+          </div>
 
-          <div className="relative max-w-xs flex-1">
+          {/* Search Box */}
+          <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
             <input
               type="text"
@@ -215,7 +268,7 @@ export const AccountDetailsPage = () => {
               return (
                 <div
                   key={tx.id}
-                  className="bg-white dark:bg-[#211B30] rounded-2xl p-3.5 border border-purple-50 dark:border-purple-950/30 shadow-sm flex items-center justify-between gap-3"
+                  className="bg-white dark:bg-[#211B30] rounded-2xl p-3.5 border border-purple-50 dark:border-purple-950/30 shadow-sm flex items-center justify-between gap-3 transition-all hover:border-purple-200 dark:hover:border-purple-800"
                 >
                   {/* Left: Icon & Details */}
                   <div className="flex items-center gap-3 min-w-0">
@@ -249,7 +302,7 @@ export const AccountDetailsPage = () => {
                         {tx.note && (
                           <>
                             <span>•</span>
-                            <span className="truncate italic text-gray-400">{tx.note}</span>
+                            <span className="truncate italic text-gray-400 max-w-[120px]">{tx.note}</span>
                           </>
                         )}
                       </div>
@@ -371,7 +424,7 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
-          {/* Particular / Title */}
+          {/* Particular / Title & Quick Suggestions */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('particular')} *
@@ -384,25 +437,58 @@ export const AccountDetailsPage = () => {
               placeholder={t('particularPlaceholder')}
               className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
             />
+            {/* Quick chips */}
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {quickParticularSuggestions.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setTxParticular(item)}
+                  className="px-2 py-1 rounded-lg text-[11px] bg-purple-50 dark:bg-purple-950/40 text-[#7542C8] dark:text-purple-300 hover:bg-purple-100 transition-colors"
+                >
+                  + {item}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Grid: Method & Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                {t('method')} *
-              </label>
-              <select
-                value={txMethodId}
-                onChange={(e) => setTxMethodId(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
-              >
-                {methods.filter((m) => m.isActive).map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  {t('method')} *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsAddingNewMethod(!isAddingNewMethod)}
+                  className="text-[11px] text-[#7542C8] dark:text-purple-400 hover:underline font-medium"
+                >
+                  {isAddingNewMethod ? (lang === 'bn' ? 'তালিকায় ফিরুন' : 'Select existing') : (lang === 'bn' ? '+ নতুন মাধ্যম' : '+ New Method')}
+                </button>
+              </div>
+
+              {isAddingNewMethod ? (
+                <input
+                  type="text"
+                  placeholder="e.g. City Bank"
+                  value={newMethodName}
+                  onChange={(e) => setNewMethodName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-purple-300 dark:border-purple-700 bg-purple-50/50 dark:bg-purple-950/20 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                />
+              ) : (
+                <select
+                  value={txMethodId || methods[0]?.id}
+                  onChange={(e) => setTxMethodId(e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                >
+                  {methods.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
@@ -429,7 +515,7 @@ export const AccountDetailsPage = () => {
               value={txNote}
               onChange={(e) => setTxNote(e.target.value)}
               placeholder={t('notePlaceholder')}
-              className="w-full px-3.5 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
             />
           </div>
 
