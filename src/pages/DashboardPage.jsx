@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, UserPlus, ArrowRightLeft, Edit2, Trash2, ChevronRight, Search, FileDown, FileSpreadsheet, Download } from 'lucide-react';
+import { Plus, UserPlus, ArrowRightLeft, Edit2, Trash2, ChevronRight, Search, FileDown, FileSpreadsheet, Download, Loader2 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useLanguage } from '../context/LanguageContext';
 import { SummaryCards } from '../components/common/SummaryCards';
@@ -46,6 +46,7 @@ export const DashboardPage = () => {
 
   // Export Modal state
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const overall = getOverallSummary();
 
@@ -147,22 +148,32 @@ export const DashboardPage = () => {
     }
   };
 
-  const handleExportPDF = () => {
-    const accountsWithSummary = accounts.map((acc) => ({
-      ...acc,
-      ...getAccountSummary(acc.id),
-    }));
-    exportDashboardPDF(accountsWithSummary, overall, lang);
-    setIsExportOpen(false);
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      const accountsWithSummary = accounts.map((acc) => ({
+        ...acc,
+        ...getAccountSummary(acc.id),
+      }));
+      await exportDashboardPDF(accountsWithSummary, overall, lang);
+      setIsExportOpen(false);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handleExportExcel = () => {
-    const accountsWithSummary = accounts.map((acc) => ({
-      ...acc,
-      ...getAccountSummary(acc.id),
-    }));
-    exportDashboardExcel(accountsWithSummary, overall);
-    setIsExportOpen(false);
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      const accountsWithSummary = accounts.map((acc) => ({
+        ...acc,
+        ...getAccountSummary(acc.id),
+      }));
+      await exportDashboardExcel(accountsWithSummary, overall);
+      setIsExportOpen(false);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -563,18 +574,20 @@ export const DashboardPage = () => {
           <div className="grid grid-cols-2 gap-3 pt-2">
             <button
               onClick={handleExportPDF}
-              className="py-4 px-3 rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 hover:bg-purple-100 text-[#7542C8] dark:text-purple-300 flex flex-col items-center gap-2 transition-all"
+              disabled={isExporting}
+              className="py-4 px-3 rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 hover:bg-purple-100 text-[#7542C8] dark:text-purple-300 flex flex-col items-center gap-2 transition-all disabled:opacity-50"
             >
-              <FileDown className="w-7 h-7" />
-              <span className="text-xs font-bold">PDF Format</span>
+              {isExporting ? <Loader2 className="w-7 h-7 animate-spin" /> : <FileDown className="w-7 h-7" />}
+              <span className="text-xs font-bold">{isExporting ? (lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...') : 'PDF Format'}</span>
             </button>
 
             <button
               onClick={handleExportExcel}
-              className="py-4 px-3 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100 text-green-700 dark:text-green-300 flex flex-col items-center gap-2 transition-all"
+              disabled={isExporting}
+              className="py-4 px-3 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100 text-green-700 dark:text-green-300 flex flex-col items-center gap-2 transition-all disabled:opacity-50"
             >
-              <FileSpreadsheet className="w-7 h-7" />
-              <span className="text-xs font-bold">Excel (.xlsx)</span>
+              {isExporting ? <Loader2 className="w-7 h-7 animate-spin" /> : <FileSpreadsheet className="w-7 h-7" />}
+              <span className="text-xs font-bold">{isExporting ? (lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...') : 'Excel (.xlsx)'}</span>
             </button>
           </div>
         </div>

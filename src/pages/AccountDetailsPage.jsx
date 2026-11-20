@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Search, ArrowLeft, ArrowDownLeft, ArrowUpRight, Calendar, Tag, CreditCard, Edit2, Trash2, Download, Filter, FileDown, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, ArrowLeft, ArrowDownLeft, ArrowUpRight, Calendar, Tag, CreditCard, Edit2, Trash2, Download, Filter, FileDown, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useLanguage } from '../context/LanguageContext';
 import { SummaryCards } from '../components/common/SummaryCards';
@@ -31,14 +31,14 @@ export const AccountDetailsPage = () => {
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Form states
+  // Form states (No Note field as requested)
   const [txType, setTxType] = useState('credit');
   const [txAmount, setTxAmount] = useState('');
   const [txParticular, setTxParticular] = useState('');
   const [txMethodId, setTxMethodId] = useState('');
   const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
-  const [txNote, setTxNote] = useState('');
   const [formError, setFormError] = useState('');
 
   // Inline Quick Add Method state
@@ -84,7 +84,6 @@ export const AccountDetailsPage = () => {
     setTxParticular('');
     setTxMethodId(methods[0]?.id || 'm-cash');
     setTxDate(new Date().toISOString().split('T')[0]);
-    setTxNote('');
     setFormError('');
     setIsAddingNewMethod(false);
     setIsTxModalOpen(true);
@@ -97,7 +96,6 @@ export const AccountDetailsPage = () => {
     setTxParticular(tx.particular);
     setTxMethodId(tx.methodId || methods[0]?.id || 'm-cash');
     setTxDate(tx.date || new Date().toISOString().split('T')[0]);
-    setTxNote(tx.note || '');
     setFormError('');
     setIsAddingNewMethod(false);
     setIsTxModalOpen(true);
@@ -129,7 +127,6 @@ export const AccountDetailsPage = () => {
         particular: txParticular.trim(),
         methodId: finalMethodId || methods[0]?.id || 'm-cash',
         date: txDate,
-        note: txNote.trim(),
       });
     } else {
       await addTransaction({
@@ -139,7 +136,6 @@ export const AccountDetailsPage = () => {
         particular: txParticular.trim(),
         methodId: finalMethodId || methods[0]?.id || 'm-cash',
         date: txDate,
-        note: txNote.trim(),
       });
     }
 
@@ -152,14 +148,24 @@ export const AccountDetailsPage = () => {
     }
   };
 
-  const handleExportPDF = () => {
-    exportAccountPDF(account, summary, accountTxs, lang);
-    setIsExportOpen(false);
+  const handleExportPDF = async () => {
+    try {
+      setIsExporting(true);
+      await exportAccountPDF(account, summary, accountTxs, lang);
+      setIsExportOpen(false);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handleExportExcel = () => {
-    exportAccountExcel(account, summary, accountTxs);
-    setIsExportOpen(false);
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      await exportAccountExcel(account, summary, accountTxs);
+      setIsExportOpen(false);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -319,12 +325,6 @@ export const AccountDetailsPage = () => {
                         <span className="px-1.5 py-0.2 rounded bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 font-medium">
                           {tx.methodNameSnapshot || 'Cash'}
                         </span>
-                        {tx.note && (
-                          <>
-                            <span>•</span>
-                            <span className="truncate italic text-gray-400 max-w-[120px]">{tx.note}</span>
-                          </>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -370,7 +370,7 @@ export const AccountDetailsPage = () => {
         </div>
       </div>
 
-      {/* 5. Add / Edit Transaction Modal */}
+      {/* 5. Add / Edit Transaction Modal (Clean form without Note) */}
       <Modal
         isOpen={isTxModalOpen}
         onClose={() => setIsTxModalOpen(false)}
@@ -378,6 +378,7 @@ export const AccountDetailsPage = () => {
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleSaveTx} className="space-y-4">
+          {/* Type Selector: Credit (+) vs Debit (−) */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('transactionType')} *
@@ -421,6 +422,7 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
+          {/* Amount Field */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('amount')} *
@@ -442,6 +444,7 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
+          {/* Particular / Title & Quick Suggestions */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               {t('particular')} *
@@ -468,6 +471,7 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
+          {/* Grid: Method & Date */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -520,19 +524,6 @@ export const AccountDetailsPage = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-              {t('note')}
-            </label>
-            <input
-              type="text"
-              value={txNote}
-              onChange={(e) => setTxNote(e.target.value)}
-              placeholder={t('notePlaceholder')}
-              className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
-            />
-          </div>
-
           {formError && (
             <p className="text-xs text-red-500 font-medium">{formError}</p>
           )}
@@ -572,17 +563,19 @@ export const AccountDetailsPage = () => {
           <div className="grid grid-cols-2 gap-3 pt-2">
             <button
               onClick={handleExportPDF}
-              className="py-4 px-3 rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 hover:bg-purple-100 text-[#7542C8] dark:text-purple-300 flex flex-col items-center gap-2 transition-all"
+              disabled={isExporting}
+              className="py-4 px-3 rounded-2xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 hover:bg-purple-100 text-[#7542C8] dark:text-purple-300 flex flex-col items-center gap-2 transition-all disabled:opacity-50"
             >
-              <FileDown className="w-7 h-7" />
-              <span className="text-xs font-bold">PDF Statement</span>
+              {isExporting ? <Loader2 className="w-7 h-7 animate-spin" /> : <FileDown className="w-7 h-7" />}
+              <span className="text-xs font-bold">{isExporting ? (lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...') : 'PDF Statement'}</span>
             </button>
 
             <button
               onClick={handleExportExcel}
-              className="py-4 px-3 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100 text-green-700 dark:text-green-300 flex flex-col items-center gap-2 transition-all"
+              disabled={isExporting}
+              className="py-4 px-3 rounded-2xl border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100 text-green-700 dark:text-green-300 flex flex-col items-center gap-2 transition-all disabled:opacity-50"
             >
-              <FileSpreadsheet className="w-7 h-7" />
+              {isExporting ? <Loader2 className="w-7 h-7 animate-spin" /> : <FileSpreadsheet className="w-7 h-7" />}
               <span className="text-xs font-bold">Excel (.xlsx)</span>
             </button>
           </div>
