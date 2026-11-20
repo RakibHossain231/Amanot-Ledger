@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LedgerProvider } from './context/LedgerContext';
 import { Header } from './components/layout/Header';
 import { BottomNav } from './components/layout/BottomNav';
+import { Footer } from './components/layout/Footer';
 import { PinModal } from './components/common/PinModal';
 import { AuthPage } from './pages/AuthPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -49,13 +50,14 @@ function AppContent() {
         <Header />
 
         {/* Main App Content Viewport */}
-        <main className="flex-1 w-full">
+        <main className="flex-1 w-full pb-16">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/account/:id" element={<AccountDetailsPage />} />
             <Route path="/profile" element={<OwnerProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Routes>
+          <Footer />
         </main>
 
         {/* Mobile Bottom Navigation */}
