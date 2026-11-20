@@ -139,15 +139,44 @@ export const AuthProvider = ({ children }) => {
     setGuestMode(false);
   };
 
-  const resetPassword = async (email) => {
+  const sendPasswordResetOtp = async (email) => {
     if (!isSupabaseConfigured || !supabase) {
       throw new Error('Supabase is not configured yet.');
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    if (error) throw error;
+    return data;
+  };
+
+  const verifyPasswordResetOtp = async ({ email, token }) => {
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: true };
+    }
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: token.trim(),
+      type: 'recovery',
     });
     if (error) throw error;
+    if (data?.session) {
+      setSession(data.session);
+      setUser(data.user);
+    }
+    return data;
   };
+
+  const updatePassword = async (newPassword) => {
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: true };
+    }
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const resetPassword = sendPasswordResetOtp;
 
   // PIN Operations
   const setPin = (newPin) => {
@@ -189,6 +218,9 @@ export const AuthProvider = ({ children }) => {
         resendOtp,
         signOut,
         resetPassword,
+        sendPasswordResetOtp,
+        verifyPasswordResetOtp,
+        updatePassword,
         setPin,
         removePin,
         unlockWithPin,

@@ -7,7 +7,16 @@ import { Modal } from '../components/common/Modal';
 
 export const AuthPage = () => {
   const { lang, t } = useLanguage();
-  const { signIn, signUp, verifyEmailOtp, resendOtp, resetPassword, enableGuestMode } = useAuth();
+  const {
+    signIn,
+    signUp,
+    verifyEmailOtp,
+    resendOtp,
+    sendPasswordResetOtp,
+    verifyPasswordResetOtp,
+    updatePassword,
+    enableGuestMode,
+  } = useAuth();
 
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'verify'
   const [email, setEmail] = useState('');
@@ -30,10 +39,91 @@ export const AuthPage = () => {
     return () => clearTimeout(timer);
   }, [resendCooldown]);
 
-  // Forgot password modal
+  // Forgot password states
   const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState('email'); // 'email' | 'otp' | 'new_password'
   const [resetEmail, setResetEmail] = useState('');
-  const [resetMsg, setResetMsg] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
+
+  const handleOpenForgot = () => {
+    setForgotStep('email');
+    setResetEmail(email || '');
+    setResetOtp('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setResetError('');
+    setResetSuccess('');
+    setIsForgotOpen(true);
+  };
+
+  const handleSendResetCode = async (e) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) return;
+    setResetError('');
+    setResetSuccess('');
+    setIsForgotLoading(true);
+
+    try {
+      await sendPasswordResetOtp(resetEmail.trim());
+      setForgotStep('otp');
+      setResetSuccess(lang === 'bn' 
+        ? `${resetEmail} এ পাসওয়ার্ড রিসেট কোড পাঠানো হয়েছে।` 
+        : `Reset code sent to ${resetEmail}.`);
+    } catch (err) {
+      setResetError(err.message || 'Failed to send reset code');
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
+  const handleVerifyResetOtp = async (e) => {
+    e.preventDefault();
+    if (!resetOtp.trim()) return;
+    setResetError('');
+    setResetSuccess('');
+    setIsForgotLoading(true);
+
+    try {
+      await verifyPasswordResetOtp({ email: resetEmail, token: resetOtp.trim() });
+      setForgotStep('new_password');
+      setResetSuccess(lang === 'bn' ? 'কোড যাচাই হয়েছে! নতুন পাসওয়ার্ড দিন।' : 'Code verified! Enter new password.');
+    } catch (err) {
+      setResetError(err.message || 'Invalid verification code');
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
+  const handleSetNewPassword = async (e) => {
+    e.preventDefault();
+    setResetError('');
+    if (newPassword.length < 6) {
+      setResetError(lang === 'bn' ? 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' : 'Password must be at least 6 characters');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError(lang === 'bn' ? 'উভয় পাসওয়ার্ড একই হতে হবে' : 'Passwords do not match');
+      return;
+    }
+
+    setIsForgotLoading(true);
+    try {
+      await updatePassword(newPassword);
+      setResetSuccess(lang === 'bn' ? 'পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে!' : 'Password changed successfully!');
+      setTimeout(() => {
+        setIsForgotOpen(false);
+      }, 1200);
+    } catch (err) {
+      setResetError(err.message || 'Failed to update password');
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -260,7 +350,7 @@ export const AuthPage = () => {
                   {mode === 'login' && (
                     <button
                       type="button"
-                      onClick={() => setIsForgotOpen(true)}
+                      onClick={handleOpenForgot}
                       className="text-[11px] text-[#7542C8] dark:text-purple-400 hover:underline"
                     >
                       {lang === 'bn' ? 'পাসওয়ার্ড ভুলে গেছেন?' : 'Forgot password?'}
@@ -314,45 +404,163 @@ export const AuthPage = () => {
         </div>
       </div>
 
-      {/* Forgot Password Modal */}
+      {/* 3-Step Forgot Password & Reset Modal */}
       <Modal
         isOpen={isForgotOpen}
-        onClose={() => { setIsForgotOpen(false); setResetMsg(''); }}
-        title={lang === 'bn' ? 'পাসওয়ার্ড পুনরুদ্ধার' : 'Reset Password'}
+        onClose={() => setIsForgotOpen(false)}
+        title={lang === 'bn' ? 'পাসওয়ার্ড পুনরুদ্ধার ও পরিবর্তন' : 'Reset & Update Password'}
       >
-        <form onSubmit={handleResetPassword} className="space-y-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {lang === 'bn' 
-              ? 'আপনার ইমেইল এড্রেসটি দিন। আমরা পাসওয়ার্ড রিসেট করার লিঙ্ক পাঠিয়ে দেব।' 
-              : 'Enter your email to receive password reset link.'}
-          </p>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-              {lang === 'bn' ? 'ইমেইল' : 'Email'}
-            </label>
-            <input
-              type="email"
-              required
-              value={resetEmail}
-              onChange={(e) => setResetEmail(e.target.value)}
-              placeholder="owner@example.com"
-              className="w-full px-3.5 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100"
-            />
-          </div>
-
-          {resetMsg && (
-            <p className="text-xs font-medium text-purple-600 dark:text-purple-300">{resetMsg}</p>
+        <div className="space-y-4">
+          {resetError && (
+            <div className="flex items-center gap-2 p-2.5 text-xs text-red-600 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-900/30">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{resetError}</span>
+            </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <Button variant="outline" size="sm" onClick={() => setIsForgotOpen(false)}>
-              {t('cancel')}
-            </Button>
-            <Button type="submit" variant="primary" size="sm">
-              {lang === 'bn' ? 'লিঙ্ক পাঠান' : 'Send Link'}
-            </Button>
-          </div>
-        </form>
+          {resetSuccess && (
+            <div className="flex items-center gap-2 p-2.5 text-xs text-green-700 bg-green-50 dark:bg-green-950/40 rounded-xl border border-green-200 dark:border-green-900/30">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{resetSuccess}</span>
+            </div>
+          )}
+
+          {forgotStep === 'email' && (
+            /* Step 1: Request OTP by Email */
+            <form onSubmit={handleSendResetCode} className="space-y-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {lang === 'bn' 
+                  ? 'আপনার অ্যাকাউন্টের রেজিস্টার্ড ইমেইল এড্রেসটি দিন। আমরা সেখানে একটি গোপন রিসেট কোড পাঠাব।' 
+                  : 'Enter your registered email address to receive a password reset code.'}
+              </p>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  {lang === 'bn' ? 'ইমেইল এড্রেস' : 'Email Address'} *
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="owner@example.com"
+                    className="w-full pl-10 pr-3.5 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <Button variant="outline" size="sm" onClick={() => setIsForgotOpen(false)}>
+                  {t('cancel')}
+                </Button>
+                <Button type="submit" variant="primary" size="sm" disabled={isForgotLoading}>
+                  {isForgotLoading ? (lang === 'bn' ? 'পাঠানো হচ্ছে...' : 'Sending...') : (lang === 'bn' ? 'রিসেট কোড পাঠান' : 'Send Reset Code')}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {forgotStep === 'otp' && (
+            /* Step 2: Verify Recovery OTP */
+            <form onSubmit={handleVerifyResetOtp} className="space-y-4">
+              <div className="p-2.5 bg-purple-50 dark:bg-purple-950/30 rounded-xl text-center text-xs">
+                <span className="text-gray-500 block">{lang === 'bn' ? 'কোড পাঠানো হয়েছে:' : 'Code sent to:'}</span>
+                <span className="font-bold text-[#7542C8] dark:text-purple-300">{resetEmail}</span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 text-center">
+                  {lang === 'bn' ? 'ইমেইলে আসা ভেরিফিকেশন কোড দিন' : 'Enter Verification Code'} *
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={8}
+                  required
+                  autoFocus
+                  value={resetOtp}
+                  onChange={(e) => setResetOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="12345678"
+                  className="w-full text-center tracking-[0.35em] text-xl font-bold py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => setForgotStep('email')}
+                  className="text-xs text-gray-500 hover:text-gray-800"
+                >
+                  {lang === 'bn' ? 'ইমেইল পরিবর্তন' : 'Change Email'}
+                </button>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setIsForgotOpen(false)}>
+                    {t('cancel')}
+                  </Button>
+                  <Button type="submit" variant="primary" size="sm" disabled={isForgotLoading || resetOtp.length < 6}>
+                    {isForgotLoading ? (lang === 'bn' ? 'যাচাই হচ্ছে...' : 'Verifying...') : (lang === 'bn' ? 'কোড যাচাই করুন' : 'Verify Code')}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {forgotStep === 'new_password' && (
+            /* Step 3: Set New Password */
+            <form onSubmit={handleSetNewPassword} className="space-y-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {lang === 'bn' ? 'আপনার অ্যাকাউন্টের জন্য একটি নতুন পাসওয়ার্ড সেট করুন:' : 'Set a new password for your account:'}
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  {lang === 'bn' ? 'নতুন পাসওয়ার্ড' : 'New Password'} *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    autoFocus
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  {lang === 'bn' ? 'নতুন পাসওয়ার্ড পুনরায় লিখুন' : 'Confirm New Password'} *
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-9 pr-3.5 py-2 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <Button type="submit" variant="primary" size="md" className="w-full" disabled={isForgotLoading}>
+                  {isForgotLoading 
+                    ? (lang === 'bn' ? 'আপডেট হচ্ছে...' : 'Updating...') 
+                    : (lang === 'bn' ? 'পাসওয়ার্ড নিশ্চিত ও পরিবর্তন করুন' : 'Update Password & Sign In')}
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
       </Modal>
     </div>
   );
