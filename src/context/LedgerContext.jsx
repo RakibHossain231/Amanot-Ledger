@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, seedDefaultData } from '../services/db';
+import { syncService } from '../services/sync';
 
 const LedgerContext = createContext();
 
@@ -10,8 +11,16 @@ export const LedgerProvider = ({ children }) => {
   useEffect(() => {
     seedDefaultData().then(() => {
       setIsDbReady(true);
+      // Auto-sync on startup if online
+      syncService.syncNow().catch(() => {});
     });
   }, []);
+
+  const triggerAutoSync = () => {
+    setTimeout(() => {
+      syncService.syncNow().catch(() => {});
+    }, 500);
+  };
 
   // Live queries from Dexie.js (IndexedDB)
   const accounts = useLiveQuery(
@@ -53,6 +62,7 @@ export const LedgerProvider = ({ children }) => {
       newValues: newAccount,
       createdAt: new Date().toISOString(),
     });
+    triggerAutoSync();
     return newAccount;
   };
 
@@ -73,6 +83,7 @@ export const LedgerProvider = ({ children }) => {
       newValues: updatedFields,
       createdAt: new Date().toISOString(),
     });
+    triggerAutoSync();
   };
 
   const deleteAccount = async (id) => {
@@ -94,6 +105,7 @@ export const LedgerProvider = ({ children }) => {
       oldValues: oldAccount,
       createdAt: new Date().toISOString(),
     });
+    triggerAutoSync();
   };
 
   // 2. Transaction Operations
@@ -122,6 +134,7 @@ export const LedgerProvider = ({ children }) => {
       newValues: newTx,
       createdAt: new Date().toISOString(),
     });
+    triggerAutoSync();
     return newTx;
   };
 
@@ -152,6 +165,7 @@ export const LedgerProvider = ({ children }) => {
       newValues,
       createdAt: new Date().toISOString(),
     });
+    triggerAutoSync();
   };
 
   const deleteTransaction = async (id) => {
@@ -172,6 +186,7 @@ export const LedgerProvider = ({ children }) => {
       oldValues: oldTx,
       createdAt: new Date().toISOString(),
     });
+    triggerAutoSync();
   };
 
   // 3. Method Operations
@@ -185,6 +200,7 @@ export const LedgerProvider = ({ children }) => {
       updatedAt: new Date().toISOString(),
     };
     await db.methods.add(newMethod);
+    triggerAutoSync();
     return newMethod;
   };
 
@@ -203,6 +219,7 @@ export const LedgerProvider = ({ children }) => {
       deletedAt: null,
     };
     await db.transfers.add(newTransfer);
+    triggerAutoSync();
     return newTransfer;
   };
 
