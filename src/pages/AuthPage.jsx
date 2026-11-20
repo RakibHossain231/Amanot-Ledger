@@ -173,18 +173,18 @@ export const AuthPage = () => {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 text-center">
-                  {lang === 'bn' ? '৬ সংখ্যার ভেরিফিকেশন কোড দিন' : 'Enter 6-digit Verification Code'} *
+                  {lang === 'bn' ? 'ইমেইলে পাঠানো ভেরিফিকেশন কোড দিন' : 'Enter Verification Code'} *
                 </label>
                 <input
                   type="text"
                   inputMode="numeric"
-                  maxLength={6}
+                  maxLength={8}
                   required
                   autoFocus
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="123456"
-                  className="w-full text-center tracking-[0.6em] text-2xl font-bold py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                  placeholder="12345678"
+                  className="w-full text-center tracking-[0.35em] text-xl sm:text-2xl font-bold py-3 px-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
                 />
               </div>
 
