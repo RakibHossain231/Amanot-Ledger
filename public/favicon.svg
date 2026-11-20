@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" rx="24" fill="#7542C8"/>
+  <defs>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8E57E8"/>
+      <stop offset="100%" stop-color="#602CAE"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="94" height="94" rx="22" fill="url(#purpleGrad)"/>
+  <rect x="22" y="26" width="56" height="48" rx="8" fill="#FFFFFF"/>
+  <path d="M22 38 H78" stroke="#ECE8F7" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M54 44 H78 V56 H54 C50.686 56 48 53.314 48 50 C48 46.686 50.686 44 54 44 Z" fill="#7542C8"/>
+  <circle cx="68" cy="50" r="3.5" fill="#FCD34D"/>
+  <circle cx="72" cy="24" r="11" fill="url(#goldGrad)" stroke="#FFFFFF" stroke-width="2.5"/>
+  <text x="72" y="28" font-family="system-ui, sans-serif" font-weight="bold" font-size="12" fill="#78350F" text-anchor="middle">৳</text>
+</svg>
