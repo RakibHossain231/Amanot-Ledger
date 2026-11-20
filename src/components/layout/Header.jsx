@@ -44,10 +44,10 @@ export const Header = ({
               <img src="/logo.svg" alt="Logo" className="w-8 h-8 rounded-lg shadow-inner" />
               <div className="flex flex-col">
                 <span className="font-bold text-base tracking-tight leading-tight">
-                  {t('appName')}
+                  Amanot Ledger
                 </span>
-                <span className="text-[10px] text-purple-200 leading-tight">
-                  {lang === 'bn' ? 'আমানত ও লেজার' : 'Smart Ledger'}
+                <span className="text-[10px] text-purple-200 leading-tight font-medium">
+                  আমানত লেজার
                 </span>
               </div>
             </div>

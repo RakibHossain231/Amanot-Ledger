@@ -1,6 +1,6 @@
 export const translations = {
   bn: {
-    appName: 'আমানত লেজার',
+    appName: 'Amanot Ledger - আমানত লেজার',
     tagline: 'ব্যক্তিগত আমানত ও লেনদেন হিসাব',
     dashboard: 'ড্যাশবোর্ড',
     accounts: 'অ্যাকাউন্ট তালিকা',
@@ -61,7 +61,7 @@ export const translations = {
     internalTransfer: 'ইন্টারনাল ট্রান্সফার',
   },
   en: {
-    appName: 'Amanot Ledger',
+    appName: 'Amanot Ledger - আমানত লেজার',
     tagline: 'Personal Money & Ledger Management',
     dashboard: 'Dashboard',
     accounts: 'Accounts',
