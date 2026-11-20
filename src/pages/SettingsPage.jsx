@@ -112,7 +112,29 @@ export const SettingsPage = () => {
 
   return (
     <div className="pb-24 pt-3 px-4 max-w-3xl mx-auto space-y-4">
-      {/* 1. Language Settings */}
+      {/* 1. User Profile & Account Banner (Top) */}
+      <div className="bg-gradient-to-r from-purple-50/80 to-indigo-50/60 dark:from-[#251E38] dark:to-[#1C162B] rounded-2xl p-4 border border-purple-100 dark:border-purple-900/40 shadow-sm flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 shrink-0 rounded-full bg-gradient-to-tr from-[#7542C8] to-[#9A6EE8] text-white flex items-center justify-center font-bold text-base shadow-md shadow-purple-500/20">
+            {user?.user_metadata?.full_name 
+              ? user.user_metadata.full_name[0].toUpperCase() 
+              : (user?.email ? user.email[0].toUpperCase() : 'A')}
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+              {user?.user_metadata?.full_name || (user ? 'Owner' : (guestMode ? (lang === 'bn' ? 'অফলাইন মোড' : 'Offline Mode') : 'Owner'))}
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {user?.email || (guestMode ? (lang === 'bn' ? 'লোকাল অফলাইন মোডে চলছে' : 'Running locally') : 'amanot-owner')}
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-white/80 dark:bg-purple-950/60 text-[#7542C8] dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+          {user ? (lang === 'bn' ? 'সুপাবেস কানেক্টেড' : 'Supabase Active') : (lang === 'bn' ? 'অফলাইন' : 'Offline')}
+        </div>
+      </div>
+
+      {/* 2. Language Settings */}
       <div className="bg-white dark:bg-[#211B30] rounded-2xl p-4 border border-purple-50 dark:border-purple-950/40 shadow-sm space-y-3">
         <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-sm">
           <Globe className="w-4 h-4 text-[#7542C8] dark:text-purple-400" />
@@ -303,32 +325,7 @@ export const SettingsPage = () => {
         </div>
       </div>
 
-      {/* 5. User Account & Logout */}
-      <div className="bg-white dark:bg-[#211B30] rounded-2xl p-4 border border-purple-50 dark:border-purple-950/40 shadow-sm flex items-center justify-between">
-        <div>
-          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 block">
-            {user?.email || (guestMode ? (lang === 'bn' ? 'অফলাইন মোড' : 'Offline Mode') : 'Owner Account')}
-          </span>
-          <span className="text-[10px] text-gray-400">
-            {user ? 'Authenticated Session' : 'Local Offline Access'}
-          </span>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to log out?')) {
-              signOut();
-            }
-          }}
-          icon={LogOut}
-        >
-          {lang === 'bn' ? 'লগআউট' : 'Logout'}
-        </Button>
-      </div>
-
-      {/* 6. App Info */}
+      {/* 5. App Info */}
       <div className="bg-white dark:bg-[#211B30] rounded-2xl p-4 border border-purple-50 dark:border-purple-950/40 shadow-sm space-y-2 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-sm mb-1">
           <Info className="w-4 h-4 text-[#7542C8] dark:text-purple-400" />
@@ -339,6 +336,22 @@ export const SettingsPage = () => {
         <p className="text-[11px] pt-1 border-t border-gray-100 dark:border-gray-800">
           Currency: Bangladeshi Taka (৳) • Offline-First PWA • Cloudflare & Supabase Ready
         </p>
+      </div>
+
+      {/* 6. Dedicated Bottom Logout Button */}
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm(lang === 'bn' ? 'আপনি কি নিশ্চিত যে আপনি লগআউট করতে চান?' : 'Are you sure you want to log out?')) {
+              signOut();
+            }
+          }}
+          className="w-full py-3.5 px-4 rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-50/50 hover:bg-red-100/70 dark:bg-red-950/20 dark:hover:bg-red-950/40 text-red-600 dark:text-red-400 font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.99] cursor-pointer"
+        >
+          <LogOut className="w-4 h-4 text-red-500" />
+          <span>{lang === 'bn' ? 'লগআউট করুন' : 'Log Out of Account'}</span>
+        </button>
       </div>
 
       {/* Set PIN Modal */}
