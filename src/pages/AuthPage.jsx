@@ -90,11 +90,9 @@ export const AuthPage = () => {
 
     try {
       await verifyPasswordResetOtp({ email: resetEmail, token: resetOtp.trim() });
-      setForgotStep('new_password');
-      setResetSuccess(lang === 'bn' ? 'কোড যাচাই হয়েছে! নতুন পাসওয়ার্ড দিন।' : 'Code verified! Enter new password.');
+      setIsForgotOpen(false);
     } catch (err) {
       setResetError(err.message || 'Invalid verification code');
-    } finally {
       setIsForgotLoading(false);
     }
   };

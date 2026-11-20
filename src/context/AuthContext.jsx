@@ -7,6 +7,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => {
+    return sessionStorage.getItem('amanot_recovery_mode') === 'true';
+  });
 
   // Local Offline PIN lock support
   const [savedPin, setSavedPin] = useState(() => localStorage.getItem('amanot_pin') || null);
@@ -38,7 +41,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     // 2. Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user || null);
       if (session?.user) {
@@ -47,6 +50,10 @@ export const AuthProvider = ({ children }) => {
           email: session.user.email,
           fullName: session.user.user_metadata?.full_name || 'Owner',
         }));
+      }
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        sessionStorage.setItem('amanot_recovery_mode', 'true');
       }
       setLoading(false);
     });
@@ -150,6 +157,8 @@ export const AuthProvider = ({ children }) => {
 
   const verifyPasswordResetOtp = async ({ email, token }) => {
     if (!isSupabaseConfigured || !supabase) {
+      setIsPasswordRecovery(true);
+      sessionStorage.setItem('amanot_recovery_mode', 'true');
       return { success: true };
     }
     const { data, error } = await supabase.auth.verifyOtp({
@@ -158,6 +167,8 @@ export const AuthProvider = ({ children }) => {
       type: 'recovery',
     });
     if (error) throw error;
+    setIsPasswordRecovery(true);
+    sessionStorage.setItem('amanot_recovery_mode', 'true');
     if (data?.session) {
       setSession(data.session);
       setUser(data.user);
@@ -167,13 +178,22 @@ export const AuthProvider = ({ children }) => {
 
   const updatePassword = async (newPassword) => {
     if (!isSupabaseConfigured || !supabase) {
+      setIsPasswordRecovery(false);
+      sessionStorage.removeItem('amanot_recovery_mode');
       return { success: true };
     }
     const { data, error } = await supabase.auth.updateUser({
       password: newPassword,
     });
     if (error) throw error;
+    setIsPasswordRecovery(false);
+    sessionStorage.removeItem('amanot_recovery_mode');
     return data;
+  };
+
+  const cancelPasswordRecovery = () => {
+    setIsPasswordRecovery(false);
+    sessionStorage.removeItem('amanot_recovery_mode');
   };
 
   const resetPassword = sendPasswordResetOtp;
@@ -225,6 +245,8 @@ export const AuthProvider = ({ children }) => {
         removePin,
         unlockWithPin,
         enableGuestMode,
+        isPasswordRecovery,
+        cancelPasswordRecovery,
         isAuthenticated: Boolean(user) || guestMode,
       }}
     >

@@ -8,13 +8,14 @@ import { Header } from './components/layout/Header';
 import { BottomNav } from './components/layout/BottomNav';
 import { PinModal } from './components/common/PinModal';
 import { AuthPage } from './pages/AuthPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AccountDetailsPage } from './pages/AccountDetailsPage';
 import { OwnerProfilePage } from './pages/OwnerProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 
 function AppContent() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, isPasswordRecovery } = useAuth();
 
   if (loading) {
     return (
@@ -23,6 +24,11 @@ function AppContent() {
         <div className="w-6 h-6 border-2 border-[#7542C8] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
+  }
+
+  // Active password recovery flow (after OTP entry or reset link)
+  if (isPasswordRecovery) {
+    return <ResetPasswordPage />;
   }
 
   if (!isAuthenticated) {
