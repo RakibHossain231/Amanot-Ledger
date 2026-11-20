@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Wallet, Plus, ArrowRightLeft, CreditCard, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { User, Wallet, Plus, ArrowRightLeft, CreditCard, ArrowLeft, CheckCircle2, LogOut } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/currency';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
@@ -10,6 +11,7 @@ import { Button } from '../components/common/Button';
 export const OwnerProfilePage = () => {
   const navigate = useNavigate();
   const { lang, t } = useLanguage();
+  const { user, guestMode, signOut } = useAuth();
   const { methods, getMethodBalances, addMethod, addTransfer } = useLedger();
 
   const methodBalances = getMethodBalances();
@@ -70,19 +72,32 @@ export const OwnerProfilePage = () => {
             </div>
             <div>
               <h1 className="font-bold text-lg leading-tight">
-                {lang === 'bn' ? 'ওনার অ্যাকাউন্ট' : 'Owner Account'}
+                {user?.fullName || user?.user_metadata?.full_name || (lang === 'bn' ? 'ওনার অ্যাকাউন্ট' : 'Owner Account')}
               </h1>
-              <p className="text-xs text-purple-200">amanot.owner@example.com</p>
+              <p className="text-xs text-purple-200 truncate max-w-[180px]">
+                {user?.email || (guestMode ? (lang === 'bn' ? 'অফলাইন মোড' : 'Offline Mode') : 'owner@amanot.local')}
+              </p>
             </div>
           </div>
 
-          <div className="text-right">
+          <div className="flex flex-col items-end gap-1">
             <span className="text-[11px] text-purple-200 block">
               {lang === 'bn' ? 'সর্বমোট স্থিতি' : 'Total Net Worth'}
             </span>
             <span className="text-xl font-extrabold tracking-tight">
               {formatCurrency(totalBalance, lang)}
             </span>
+            <button
+              onClick={() => {
+                if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to log out?')) {
+                  signOut();
+                }
+              }}
+              className="text-[11px] text-purple-200 hover:text-white flex items-center gap-1 mt-1 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-lg transition-colors"
+            >
+              <LogOut className="w-3 h-3" />
+              <span>{lang === 'bn' ? 'লগআউট' : 'Logout'}</span>
+            </button>
           </div>
         </div>
 

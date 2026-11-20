@@ -11,8 +11,16 @@ db.version(1).stores({
   syncQueue: '++id, table, action, recordId, timestamp',
 });
 
-// Seed default transaction methods if empty
+// Seed default transaction methods only (No demo accounts or transactions)
 export const seedDefaultData = async () => {
+  // Purge any legacy demo data from browser if present
+  try {
+    await db.accounts.where('id').anyOf(['acc-sujon', 'acc-karim']).delete();
+    await db.transactions.where('id').anyOf(['tx-1', 'tx-2', 'tx-3', 'tx-4']).delete();
+  } catch (e) {
+    // ignore
+  }
+
   const methodCount = await db.methods.count();
   if (methodCount === 0) {
     await db.methods.bulkAdd([
@@ -21,57 +29,6 @@ export const seedDefaultData = async () => {
       { id: 'm-nagad', name: 'Nagad', isActive: true, createdAt: new Date().toISOString() },
       { id: 'm-bank', name: 'Bank', isActive: true, createdAt: new Date().toISOString() },
       { id: 'm-other', name: 'Other', isActive: true, createdAt: new Date().toISOString() },
-    ]);
-  }
-
-  const accountCount = await db.accounts.count();
-  if (accountCount === 0) {
-    const defaultAccounts = [
-      { id: 'acc-sujon', name: 'সুজন (Sujon)', isArchived: false, createdAt: new Date().toISOString() },
-      { id: 'acc-karim', name: 'করিম (Karim)', isArchived: false, createdAt: new Date().toISOString() },
-    ];
-    await db.accounts.bulkAdd(defaultAccounts);
-
-    await db.transactions.bulkAdd([
-      {
-        id: 'tx-1',
-        accountId: 'acc-sujon',
-        type: 'credit',
-        amount: 1500,
-        particular: 'আমানত হিসেবে জমা দিলেন',
-        methodId: 'm-cash',
-        methodNameSnapshot: 'Cash',
-        date: new Date().toISOString().split('T')[0],
-        note: 'প্রাথমিক আমানত',
-        createdAt: new Date().toISOString(),
-        deletedAt: null,
-      },
-      {
-        id: 'tx-2',
-        accountId: 'acc-sujon',
-        type: 'debit',
-        amount: 1000,
-        particular: 'টাকা ফেরত নিলেন',
-        methodId: 'm-cash',
-        methodNameSnapshot: 'Cash',
-        date: new Date().toISOString().split('T')[0],
-        note: '',
-        createdAt: new Date().toISOString(),
-        deletedAt: null,
-      },
-      {
-        id: 'tx-3',
-        accountId: 'acc-karim',
-        type: 'credit',
-        amount: 5000,
-        particular: 'টাকা জমা দিল',
-        methodId: 'm-bkash',
-        methodNameSnapshot: 'bKash',
-        date: new Date().toISOString().split('T')[0],
-        note: '',
-        createdAt: new Date().toISOString(),
-        deletedAt: null,
-      },
     ]);
   }
 };

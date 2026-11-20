@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, Sun, Monitor, Globe, Shield, RefreshCw, Smartphone, Info, Download, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Moon, Sun, Monitor, Globe, Shield, RefreshCw, Smartphone, Info, Download, Upload, CheckCircle2, AlertCircle, Lock, LogOut, KeyRound } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
 import { syncService } from '../services/sync';
 import { db } from '../services/db';
 import { Button } from '../components/common/Button';
+import { Modal } from '../components/common/Modal';
 
 export const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLanguage();
+  const { user, guestMode, signOut, savedPin, setPin, removePin } = useAuth();
 
   const [syncInfo, setSyncInfo] = useState({
     isOnline: true,
@@ -17,6 +20,11 @@ export const SettingsPage = () => {
   });
   const [syncMsg, setSyncMsg] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // PIN settings state
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState('');
 
   useEffect(() => {
     const unsubscribe = syncService.subscribe((info) => {
@@ -88,6 +96,18 @@ export const SettingsPage = () => {
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleSavePin = (e) => {
+    e.preventDefault();
+    if (pinInput.length !== 4 || isNaN(Number(pinInput))) {
+      setPinError(lang === 'bn' ? 'পিন অবশ্যই ৪ সংখ্যার হতে হবে' : 'PIN must be exactly 4 digits');
+      return;
+    }
+    setPin(pinInput);
+    setIsPinModalOpen(false);
+    setPinInput('');
+    setPinError('');
   };
 
   return (
@@ -170,7 +190,45 @@ export const SettingsPage = () => {
         </div>
       </div>
 
-      {/* 3. Sync & Cloud Status */}
+      {/* 3. Security & PIN Lock */}
+      <div className="bg-white dark:bg-[#211B30] rounded-2xl p-4 border border-purple-50 dark:border-purple-950/40 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-sm">
+            <Lock className="w-4 h-4 text-[#7542C8] dark:text-purple-400" />
+            <span>{lang === 'bn' ? 'অ্যাপ নিরাপত্তা ও পিন লক' : 'Security & PIN Lock'}</span>
+          </div>
+
+          {savedPin ? (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                if (window.confirm(lang === 'bn' ? 'পিন লক বন্ধ করতে চান?' : 'Remove PIN lock?')) {
+                  removePin();
+                }
+              }}
+            >
+              {lang === 'bn' ? 'পিন বন্ধ করুন' : 'Remove PIN'}
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => { setPinInput(''); setPinError(''); setIsPinModalOpen(true); }}
+            >
+              {lang === 'bn' ? 'পিন সেট করুন' : 'Set PIN'}
+            </Button>
+          )}
+        </div>
+
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {savedPin 
+            ? (lang === 'bn' ? 'পিন লক সক্রিয় রয়েছে। অ্যাপ খোলার সময় ৪ সংখ্যার পিন লাগবে।' : 'PIN Lock is active. 4-digit PIN required on app launch.')
+            : (lang === 'bn' ? 'আপনার লেজার খাতা সুরক্ষিত রাখতে একটি ৪ সংখ্যার গোপন পিন সেট করুন।' : 'Set a 4-digit secret PIN to secure your ledger.')}
+        </p>
+      </div>
+
+      {/* 4. Sync & Cloud Status */}
       <div className="bg-white dark:bg-[#211B30] rounded-2xl p-4 border border-purple-50 dark:border-purple-950/40 shadow-sm space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-sm">
@@ -245,18 +303,81 @@ export const SettingsPage = () => {
         </div>
       </div>
 
-      {/* 4. App Info */}
+      {/* 5. User Account & Logout */}
+      <div className="bg-white dark:bg-[#211B30] rounded-2xl p-4 border border-purple-50 dark:border-purple-950/40 shadow-sm flex items-center justify-between">
+        <div>
+          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 block">
+            {user?.email || (guestMode ? (lang === 'bn' ? 'অফলাইন মোড' : 'Offline Mode') : 'Owner Account')}
+          </span>
+          <span className="text-[10px] text-gray-400">
+            {user ? 'Authenticated Session' : 'Local Offline Access'}
+          </span>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            if (window.confirm(lang === 'bn' ? 'আপনি কি লগআউট করতে চান?' : 'Do you want to log out?')) {
+              signOut();
+            }
+          }}
+          icon={LogOut}
+        >
+          {lang === 'bn' ? 'লগআউট' : 'Logout'}
+        </Button>
+      </div>
+
+      {/* 6. App Info */}
       <div className="bg-white dark:bg-[#211B30] rounded-2xl p-4 border border-purple-50 dark:border-purple-950/40 shadow-sm space-y-2 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-2 text-gray-900 dark:text-gray-100 font-bold text-sm mb-1">
           <Info className="w-4 h-4 text-[#7542C8] dark:text-purple-400" />
           <span>{lang === 'bn' ? 'অ্যাপ পরিচিতি' : 'About Application'}</span>
         </div>
-        <p><strong className="text-gray-800 dark:text-gray-200">Amanot Ledger (আমানত লেজার)</strong> v1.0.0</p>
+        <p><strong className="text-gray-800 dark:text-gray-200">Amanot Ledger - আমানত লেজার</strong> v1.0.0</p>
         <p>{lang === 'bn' ? 'স্মার্ট আমানত ও লেনদেন ব্যবস্থাপনা' : 'Smart Money & Person-based Ledger Management'}</p>
         <p className="text-[11px] pt-1 border-t border-gray-100 dark:border-gray-800">
           Currency: Bangladeshi Taka (৳) • Offline-First PWA • Cloudflare & Supabase Ready
         </p>
       </div>
+
+      {/* Set PIN Modal */}
+      <Modal
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        title={lang === 'bn' ? '৪ সংখ্যার নতুন পিন দিন' : 'Set 4-Digit Security PIN'}
+      >
+        <form onSubmit={handleSavePin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+              {lang === 'bn' ? 'গোপন পিন কোড (৪ ডিজিট)' : 'Secret PIN (4 digits)'}
+            </label>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              required
+              autoFocus
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ''))}
+              placeholder="••••"
+              className="w-full text-center tracking-[1em] text-2xl font-bold py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+            />
+            {pinError && (
+              <p className="text-xs text-red-500 mt-1 font-medium">{pinError}</p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setIsPinModalOpen(false)}>
+              {t('cancel')}
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
+              {t('save')}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
