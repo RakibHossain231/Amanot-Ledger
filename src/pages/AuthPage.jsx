@@ -390,22 +390,16 @@ export const AuthPage = () => {
           )}
         </form>
 
-        {/* Offline / Local Guest Access */}
+        {/* Offline PIN Feature Reassurance */}
         <div className="pt-2 border-t border-gray-100 dark:border-gray-800 text-center">
-          <p className="text-[11px] text-gray-400 mb-2">
-            {lang === 'bn' ? 'অথবা ইন্টারনেট ছাড়া অফলাইনে ব্যবহার করতে চান?' : 'Or want to use offline without signing in?'}
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1.5 font-medium">
+            <ShieldCheck className="w-4 h-4 text-[#7542C8] dark:text-purple-400 shrink-0" />
+            <span>
+              {lang === 'bn'
+                ? '১ বার লগইন করুন • এরপর সম্পূর্ণ অফলাইনে পিন দিয়ে প্রবেশ করতে পারবেন'
+                : 'One-time login • Then enjoy fast offline PIN access'}
+            </span>
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              enableGuestMode();
-              navigate('/', { replace: true });
-            }}
-            className="text-xs font-semibold text-[#7542C8] dark:text-purple-300 hover:underline flex items-center justify-center gap-1.5 mx-auto"
-          >
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>{lang === 'bn' ? 'লোকাল অফলাইন মোডে প্রবেশ করুন' : 'Continue in Local Offline Mode'}</span>
-          </button>
         </div>
       </div>
 

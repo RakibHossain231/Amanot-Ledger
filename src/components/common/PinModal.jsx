@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 
 export const PinModal = () => {
-  const { isLocked, unlockWithPin } = useAuth();
+  const { isLocked, unlockWithPin, signOut } = useAuth();
   const { lang } = useLanguage();
   const [enteredPin, setEnteredPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -94,6 +94,27 @@ export const PinModal = () => {
             className="h-14 rounded-2xl bg-white/10 hover:bg-white/20 active:bg-red-600/30 text-white transition-all flex items-center justify-center shadow-sm"
           >
             <Delete className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Forgot PIN / Sign In with Email Option */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                window.confirm(
+                  lang === 'bn'
+                    ? 'পিন কোড ভুলে গেছেন? ইমেইল দিয়ে পুনরায় লগইন করতে চান?'
+                    : 'Forgot PIN? Re-authenticate with your email?'
+                )
+              ) {
+                signOut();
+              }
+            }}
+            className="text-xs text-purple-300 hover:text-white underline cursor-pointer transition-colors"
+          >
+            {lang === 'bn' ? 'পিন ভুলে গেছেন? ইমেইল দিয়ে লগইন করুন' : 'Forgot PIN? Sign in with email'}
           </button>
         </div>
       </div>

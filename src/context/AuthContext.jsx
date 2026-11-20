@@ -143,6 +143,9 @@ export const AuthProvider = ({ children }) => {
     setSession(null);
     localStorage.removeItem('amanot_local_owner');
     localStorage.removeItem('amanot_guest_mode');
+    localStorage.removeItem('amanot_pin');
+    setSavedPin(null);
+    setIsLocked(false);
     sessionStorage.removeItem('amanot_recovery_mode');
     setGuestMode(false);
     window.history.replaceState(null, '', '/');
@@ -204,6 +207,7 @@ export const AuthProvider = ({ children }) => {
   const setPin = (newPin) => {
     localStorage.setItem('amanot_pin', newPin);
     setSavedPin(newPin);
+    setIsLocked(false);
   };
 
   const removePin = () => {
@@ -225,6 +229,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('amanot_guest_mode', 'true');
   };
 
+  const needsPinSetup = Boolean(user) && !savedPin;
+
   return (
     <AuthContext.Provider
       value={{
@@ -234,6 +240,7 @@ export const AuthProvider = ({ children }) => {
         isLocked,
         savedPin,
         guestMode,
+        needsPinSetup,
         signIn,
         signUp,
         verifyEmailOtp,

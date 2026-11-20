@@ -9,13 +9,14 @@ import { BottomNav } from './components/layout/BottomNav';
 import { PinModal } from './components/common/PinModal';
 import { AuthPage } from './pages/AuthPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
+import { SetupPinPage } from './pages/SetupPinPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AccountDetailsPage } from './pages/AccountDetailsPage';
 import { OwnerProfilePage } from './pages/OwnerProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 
 function AppContent() {
-  const { isAuthenticated, loading, isPasswordRecovery } = useAuth();
+  const { isAuthenticated, loading, isPasswordRecovery, needsPinSetup } = useAuth();
 
   if (loading) {
     return (
@@ -33,6 +34,11 @@ function AppContent() {
 
   if (!isAuthenticated) {
     return <AuthPage />;
+  }
+
+  // Mandatory PIN setup on this device for one-time linked account
+  if (needsPinSetup) {
+    return <SetupPinPage />;
   }
 
   return (
