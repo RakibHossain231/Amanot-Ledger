@@ -15,7 +15,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) {
-      // In offline / standalone mode, check if we have a cached local user profile
       const localOwner = localStorage.getItem('amanot_local_owner');
       if (localOwner) {
         setUser(JSON.parse(localOwner));
@@ -58,7 +57,6 @@ export const AuthProvider = ({ children }) => {
   // Auth Operations
   const signIn = async (email, password) => {
     if (!isSupabaseConfigured || !supabase) {
-      // Standalone local offline login
       const localUser = {
         id: 'local-owner',
         email,
@@ -79,14 +77,8 @@ export const AuthProvider = ({ children }) => {
 
   const signUp = async (email, password, fullName) => {
     if (!isSupabaseConfigured || !supabase) {
-      const localUser = {
-        id: 'local-owner',
-        email,
-        fullName: fullName || email.split('@')[0],
-      };
-      setUser(localUser);
-      localStorage.setItem('amanot_local_owner', JSON.stringify(localUser));
-      return { success: true };
+      // In offline mode without Supabase, we transition to OTP screen
+      return { requiresVerification: true, email };
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -99,7 +91,41 @@ export const AuthProvider = ({ children }) => {
       },
     });
     if (error) throw error;
+    return { ...data, requiresVerification: true, email };
+  };
+
+  const verifyEmailOtp = async ({ email, token }) => {
+    if (!isSupabaseConfigured || !supabase) {
+      const localUser = {
+        id: 'local-owner',
+        email,
+        fullName: email.split('@')[0],
+      };
+      setUser(localUser);
+      localStorage.setItem('amanot_local_owner', JSON.stringify(localUser));
+      return { success: true };
+    }
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token: token.trim(),
+      type: 'signup',
+    });
+    if (error) throw error;
+    if (data?.session) {
+      setSession(data.session);
+      setUser(data.user);
+    }
     return data;
+  };
+
+  const resendOtp = async (email) => {
+    if (!isSupabaseConfigured || !supabase) return;
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    if (error) throw error;
   };
 
   const signOut = async () => {
@@ -159,6 +185,8 @@ export const AuthProvider = ({ children }) => {
         guestMode,
         signIn,
         signUp,
+        verifyEmailOtp,
+        resendOtp,
         signOut,
         resetPassword,
         setPin,

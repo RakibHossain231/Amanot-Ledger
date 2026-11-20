@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, Lock, User, ArrowRight, ShieldCheck, KeyRound, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, User, ArrowRight, ShieldCheck, KeyRound, AlertCircle, CheckCircle2, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Button } from '../components/common/Button';
@@ -7,16 +7,28 @@ import { Modal } from '../components/common/Modal';
 
 export const AuthPage = () => {
   const { lang, t } = useLanguage();
-  const { signIn, signUp, resetPassword, enableGuestMode } = useAuth();
+  const { signIn, signUp, verifyEmailOtp, resendOtp, resetPassword, enableGuestMode } = useAuth();
 
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'verify'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [otpCode, setOtpCode] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Resend cooldown timer
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   // Forgot password modal
   const [isForgotOpen, setIsForgotOpen] = useState(false);
@@ -32,14 +44,32 @@ export const AuthPage = () => {
     try {
       if (mode === 'login') {
         await signIn(email, password);
-      } else {
-        await signUp(email, password, fullName);
-        setSuccessMsg(lang === 'bn' ? 'অ্যাকাউন্ট তৈরি হয়েছে! আপনি এখন লগইন করতে পারেন।' : 'Account created successfully!');
+      } else if (mode === 'signup') {
+        const res = await signUp(email, password, fullName);
+        setMode('verify');
+        setResendCooldown(30);
+        setSuccessMsg(lang === 'bn' 
+          ? `আপনার ইমেইলে (${email}) একটি ভেরিফিকেশন কোড পাঠানো হয়েছে। কোডটি নিচে দিন:` 
+          : `A verification code was sent to ${email}. Please enter it below:`);
+      } else if (mode === 'verify') {
+        await verifyEmailOtp({ email, token: otpCode });
       }
     } catch (err) {
       setErrorMsg(err.message || 'Authentication failed');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    setErrorMsg('');
+    try {
+      await resendOtp(email);
+      setResendCooldown(30);
+      setSuccessMsg(lang === 'bn' ? 'নতুন ভেরিফিকেশন কোড পাঠানো হয়েছে।' : 'New verification code sent.');
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to resend code');
     }
   };
 
@@ -69,32 +99,48 @@ export const AuthPage = () => {
           </p>
         </div>
 
-        {/* Mode Tabs */}
-        <div className="grid grid-cols-2 p-1 bg-purple-50/60 dark:bg-purple-950/40 rounded-xl border border-purple-100 dark:border-purple-900/30">
-          <button
-            type="button"
-            onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
-            className={`py-2 text-xs font-bold rounded-lg transition-all ${
-              mode === 'login'
-                ? 'bg-white dark:bg-[#211B30] text-[#7542C8] dark:text-purple-300 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
-            }`}
-          >
-            {lang === 'bn' ? 'লগইন' : 'Sign In'}
-          </button>
+        {/* Mode Tabs (hidden during OTP verify) */}
+        {mode !== 'verify' ? (
+          <div className="grid grid-cols-2 p-1 bg-purple-50/60 dark:bg-purple-950/40 rounded-xl border border-purple-100 dark:border-purple-900/30">
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }}
+              className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                mode === 'login'
+                  ? 'bg-white dark:bg-[#211B30] text-[#7542C8] dark:text-purple-300 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
+              }`}
+            >
+              {lang === 'bn' ? 'লগইন' : 'Sign In'}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => { setMode('signup'); setErrorMsg(''); setSuccessMsg(''); }}
-            className={`py-2 text-xs font-bold rounded-lg transition-all ${
-              mode === 'signup'
-                ? 'bg-white dark:bg-[#211B30] text-[#7542C8] dark:text-purple-300 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
-            }`}
-          >
-            {lang === 'bn' ? 'নতুন অ্যাকাউন্ট' : 'Register'}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setErrorMsg(''); setSuccessMsg(''); }}
+              className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                mode === 'signup'
+                  ? 'bg-white dark:bg-[#211B30] text-[#7542C8] dark:text-purple-300 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
+              }`}
+            >
+              {lang === 'bn' ? 'নতুন অ্যাকাউন্ট' : 'Register'}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between pb-1 border-b border-gray-100 dark:border-gray-800">
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setOtpCode(''); setErrorMsg(''); }}
+              className="text-xs text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 flex items-center gap-1 font-semibold"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>{lang === 'bn' ? 'ইমেইল পরিবর্তন' : 'Change Email'}</span>
+            </button>
+            <span className="text-xs font-bold text-[#7542C8] dark:text-purple-300">
+              {lang === 'bn' ? 'ইমেইল ভেরিফিকেশন' : 'Email Verification'}
+            </span>
+          </div>
+        )}
 
         {/* Feedback Messages */}
         {errorMsg && (
@@ -113,80 +159,143 @@ export const AuthPage = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === 'signup' && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                {lang === 'bn' ? 'আপনার নাম' : 'Full Name'} *
-              </label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          {mode === 'verify' ? (
+            /* OTP Verification Screen */
+            <div className="space-y-4">
+              <div className="p-3 bg-purple-50/70 dark:bg-purple-950/30 rounded-2xl border border-purple-100 dark:border-purple-900/30 text-center space-y-1">
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 block">
+                  {lang === 'bn' ? 'ভেরিফিকেশন কোড পাঠানো হয়েছে:' : 'Verification code sent to:'}
+                </span>
+                <span className="text-xs font-bold text-[#7542C8] dark:text-purple-300 break-all">
+                  {email}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 text-center">
+                  {lang === 'bn' ? '৬ সংখ্যার ভেরিফিকেশন কোড দিন' : 'Enter 6-digit Verification Code'} *
+                </label>
                 <input
                   type="text"
+                  inputMode="numeric"
+                  maxLength={6}
                   required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="যেমন: মোঃ রাকিব হোসেন"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                  autoFocus
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="123456"
+                  className="w-full text-center tracking-[0.6em] text-2xl font-bold py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
                 />
               </div>
-            </div>
-          )}
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-              {lang === 'bn' ? 'ইমেইল এড্রেস' : 'Email Address'} *
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="owner@example.com"
-                className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
-              />
-            </div>
-          </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={isLoading || otpCode.length < 6}
+                className="w-full"
+              >
+                {isLoading 
+                  ? (lang === 'bn' ? 'যাচাই করা হচ্ছে...' : 'Verifying...') 
+                  : (lang === 'bn' ? 'কোড সাবমিট ও অ্যাকাউন্ট সক্রিয় করুন' : 'Verify & Activate Account')}
+              </Button>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                {lang === 'bn' ? 'পাসওয়ার্ড' : 'Password'} *
-              </label>
-              {mode === 'login' && (
+              <div className="text-center pt-1">
                 <button
                   type="button"
-                  onClick={() => setIsForgotOpen(true)}
-                  className="text-[11px] text-[#7542C8] dark:text-purple-400 hover:underline"
+                  disabled={resendCooldown > 0}
+                  onClick={handleResend}
+                  className="text-xs font-medium text-gray-500 hover:text-purple-600 disabled:opacity-50"
                 >
-                  {lang === 'bn' ? 'পাসওয়ার্ড ভুলে গেছেন?' : 'Forgot password?'}
+                  {resendCooldown > 0 
+                    ? (lang === 'bn' ? `আবার কোড পাঠানো যাবে ${resendCooldown} সেকেন্ড পর` : `Resend in ${resendCooldown}s`)
+                    : (lang === 'bn' ? 'কোড পাননি? পুনরায় কোড পাঠান' : 'Didn\'t receive code? Resend')}
                 </button>
+              </div>
+            </div>
+          ) : (
+            /* Login / Signup Fields */
+            <>
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                    {lang === 'bn' ? 'আপনার নাম' : 'Full Name'} *
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="যেমন: মোঃ রাকিব হোসেন"
+                      className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                    />
+                  </div>
+                </div>
               )}
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
-              />
-            </div>
-          </div>
 
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={isLoading}
-            className="w-full mt-2"
-          >
-            {isLoading ? (lang === 'bn' ? 'প্রক্রিয়াধীন...' : 'Processing...') : (mode === 'login' ? (lang === 'bn' ? 'লগইন করুন' : 'Sign In') : (lang === 'bn' ? 'অ্যাকাউন্ট খুলুন' : 'Create Account'))}
-          </Button>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  {lang === 'bn' ? 'ইমেইল এড্রেস' : 'Email Address'} *
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="owner@example.com"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    {lang === 'bn' ? 'পাসওয়ার্ড' : 'Password'} *
+                  </label>
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotOpen(true)}
+                      className="text-[11px] text-[#7542C8] dark:text-purple-400 hover:underline"
+                    >
+                      {lang === 'bn' ? 'পাসওয়ার্ড ভুলে গেছেন?' : 'Forgot password?'}
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#1B1627] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7542C8]"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={isLoading}
+                className="w-full mt-2"
+              >
+                {isLoading 
+                  ? (lang === 'bn' ? 'প্রক্রিয়াধীন...' : 'Processing...') 
+                  : (mode === 'login' 
+                      ? (lang === 'bn' ? 'লগইন করুন' : 'Sign In') 
+                      : (lang === 'bn' ? 'ভেরিফিকেশন কোড পাঠান' : 'Send Verification Code'))}
+              </Button>
+            </>
+          )}
         </form>
 
         {/* Offline / Local Guest Access */}
