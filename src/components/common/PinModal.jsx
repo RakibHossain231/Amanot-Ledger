@@ -13,6 +13,9 @@ export const PinModal = () => {
 
   const handleKeyPress = (num) => {
     if (enteredPin.length < 4) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(25);
+      }
       const nextPin = enteredPin + num;
       setEnteredPin(nextPin);
       setErrorMsg('');
@@ -20,7 +23,14 @@ export const PinModal = () => {
       if (nextPin.length === 4) {
         setTimeout(() => {
           const success = unlockWithPin(nextPin);
-          if (!success) {
+          if (success) {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              navigator.vibrate([30, 40, 30]);
+            }
+          } else {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              navigator.vibrate([60, 40, 60]);
+            }
             setErrorMsg(lang === 'bn' ? 'ভুল পিন কোড' : 'Incorrect PIN');
             setEnteredPin('');
           }
@@ -30,6 +40,9 @@ export const PinModal = () => {
   };
 
   const handleDelete = () => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(35);
+    }
     setEnteredPin((prev) => prev.slice(0, -1));
     setErrorMsg('');
   };

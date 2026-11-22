@@ -22,9 +22,17 @@ export const LedgerProvider = ({ children }) => {
     }, 500);
   };
 
-  // Live queries from Dexie.js (IndexedDB)
+  // Live queries from Dexie.js (IndexedDB) - sorted alphabetically
   const accounts = useLiveQuery(
-    () => db.accounts.filter((a) => !a.isArchived).reverse().toArray(),
+    () =>
+      db.accounts
+        .filter((a) => !a.isArchived)
+        .toArray()
+        .then((arr) =>
+          arr.sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+          )
+        ),
     []
   ) || [];
 

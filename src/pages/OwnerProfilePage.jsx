@@ -265,6 +265,7 @@ export const OwnerProfilePage = () => {
             </label>
             <input
               type="number"
+              inputMode="decimal"
               step="any"
               min="1"
               required

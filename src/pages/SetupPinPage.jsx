@@ -19,6 +19,9 @@ export const SetupPinPage = () => {
     setErrorMsg('');
 
     if (pin.length !== 4 || isNaN(Number(pin))) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([60, 40, 60]);
+      }
       setErrorMsg(
         lang === 'bn'
           ? 'পিন কোড অবশ্যই ৪ সংখ্যার হতে হবে।'
@@ -28,6 +31,9 @@ export const SetupPinPage = () => {
     }
 
     if (pin !== confirmPin) {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([60, 40, 60]);
+      }
       setErrorMsg(
         lang === 'bn'
           ? 'উভয় পিন কোড একই হতে হবে।'
@@ -38,6 +44,9 @@ export const SetupPinPage = () => {
 
     setIsLoading(true);
     try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([30, 40, 30]);
+      }
       setPin(pin);
       // Background sync to pull remote data immediately
       syncService.syncNow().catch(() => {});
@@ -92,7 +101,10 @@ export const SetupPinPage = () => {
               required
               autoFocus
               value={pin}
-              onChange={(e) => setPinValue(e.target.value.replace(/\D/g, ''))}
+              onChange={(e) => {
+                if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+                setPinValue(e.target.value.replace(/\D/g, ''));
+              }}
               placeholder="••••"
               className="w-full text-center tracking-[0.8em] text-2xl font-bold py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#141021] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8] transition-all"
             />
@@ -108,7 +120,10 @@ export const SetupPinPage = () => {
               maxLength={4}
               required
               value={confirmPin}
-              onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+              onChange={(e) => {
+                if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+                setConfirmPin(e.target.value.replace(/\D/g, ''));
+              }}
               placeholder="••••"
               className="w-full text-center tracking-[0.8em] text-2xl font-bold py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-[#141021] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-[#7542C8] transition-all"
             />

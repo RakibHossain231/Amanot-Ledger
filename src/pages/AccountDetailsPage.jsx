@@ -335,7 +335,7 @@ export const AccountDetailsPage = () => {
                             : 'text-red-600 dark:text-red-400'
                         }`}
                       >
-                        {formatCurrency(tx.amount, lang, true)}
+                        {formatCurrency(isCredit ? tx.amount : -tx.amount, lang, true)}
                       </div>
                       <span className="text-[10px] text-gray-400">
                         {isCredit ? t('creditShort') : t('debitShort')}
@@ -429,6 +429,7 @@ export const AccountDetailsPage = () => {
               </span>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 min="0.01"
                 required

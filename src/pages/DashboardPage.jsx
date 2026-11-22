@@ -482,6 +482,7 @@ export const DashboardPage = () => {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold">৳</span>
               <input
                 type="number"
+                inputMode="decimal"
                 step="any"
                 min="0.01"
                 required
