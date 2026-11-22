@@ -49,7 +49,7 @@ function AppContent() {
         <Header />
 
         {/* Main App Content Viewport */}
-        <main className="flex-1 w-full">
+        <main className="flex-1 w-full pb-16">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/account/:id" element={<AccountDetailsPage />} />
