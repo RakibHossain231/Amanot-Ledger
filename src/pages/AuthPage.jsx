@@ -5,7 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Button } from '../components/common/Button';
 import { Modal } from '../components/common/Modal';
-import { Footer } from '../components/layout/Footer';
 
 export const AuthPage = () => {
   const navigate = useNavigate();
@@ -402,11 +401,6 @@ export const AuthPage = () => {
             </span>
           </p>
         </div>
-      </div>
-
-      {/* Footer Branding */}
-      <div className="w-full max-w-md mt-4">
-        <Footer />
       </div>
 
       {/* 3-Step Forgot Password & Reset Modal */}
